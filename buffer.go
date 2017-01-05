@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"github.com/sermodigital/errors"
 	"github.com/sermodigital/helpers"
@@ -58,7 +57,7 @@ func GetBuffer() *Buffer {
 // at all. Additionally, do not append to the returned slice. Reallocation will
 // invalidate the Buffer.
 func (b *Buffer) UnsafeBytes() []byte {
-	// Fast path---the Buffer is empty so return nil and place the Buffer back
+	// Fast path–the Buffer is empty so return nil and place the Buffer back
 	// into the pool. This could still panic if:
 	// 	- UnsafeBytes is called
 	// 	- b is drained
@@ -76,8 +75,8 @@ func (b *Buffer) UnsafeBytes() []byte {
 
 	buf := b.Bytes()
 	runtime.SetFinalizer(&buf[0], func(c *byte) {
-		// If, somehow, b.unsafe is not one panic. This means I goofed up and
-		// missed something somewhere.
+		// If, somehow, b.unsafe != 1 panic. This means I goofed up and missed
+		// something somewhere.
 		if !atomic.CompareAndSwapUint32(&b.unsafe, 1, 0) {
 			panic("pools: Buffer.unsafe is not 1")
 		}
@@ -117,10 +116,10 @@ func (w *Buffer) grow(start, end, num int) {
 	// -2: last interval doesn't have a trailing ', '
 	x := int((width+2)*num - 2)
 
-	const intBits = (unsafe.Sizeof(int(0)) * 8) - 1
+	const intSize = (32 << (^uint(0) >> 63)) - 1
 
 	// x > 0 ? x : 0.
-	w.Grow(x & ^(x >> intBits))
+	w.Grow(x & ^(x >> intSize))
 }
 
 // WriteGroups writes the interval [offset, offset+groupLen) to w N times.
@@ -220,6 +219,8 @@ var cache = [...][2]int{
 	{99999999999999999, 1688888888888888889},
 }
 
+// totalWidth finds the cumulative length of all numbers in the range [1, n];
+// add is added to each number. If n <= 0 add is returned.
 func totalWidth(n, add int) int {
 	switch {
 	case n <= 0:
