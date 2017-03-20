@@ -3,11 +3,11 @@ package pools
 import (
 	"bytes"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"github.com/sermodigital/errors"
-	"github.com/sermodigital/helpers"
 )
 
 var bufferPool = sync.Pool{
@@ -102,12 +102,12 @@ type Buffer struct {
 
 // WriteInt64 is a wrapper that writes i to w.
 func (w *Buffer) WriteInt64(i int64) {
-	w.Write(helpers.FormatUint(uint64(i)))
+	w.WriteString(strconv.FormatInt(i, 10))
 }
 
 // WriteInt is a wrapper that writes i to w.
 func (w *Buffer) WriteInt(i int) {
-	w.Write(helpers.FormatUint(uint64(i)))
+	w.WriteString(strconv.Itoa(i))
 }
 
 func (w *Buffer) grow(start, end, num int) {
